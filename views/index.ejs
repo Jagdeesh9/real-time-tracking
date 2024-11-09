@@ -6,6 +6,21 @@
     <title>Document</title>
     <link rel="stylesheet" href="/Css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha512-Zcn6bjR/8RZbLEpLIeOwNtzREBAJnUKESxces60Mpoj+2okopSAcSUIUOseddDm0cxnGQzxIR7vJgsLZbdLE3w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        *{
+    margin: 0;
+    padding: 0;
+}
+
+body,html{
+    height: 100%;
+    width: 100%;
+}
+#map{
+    height: 100%;
+    width: 100%;
+}
+    </style>
 </head>
 
 <body>
@@ -15,5 +30,55 @@
 
 <script src="https://cdn.socket.io/4.8.0/socket.io.min.js" integrity="sha384-OoIbkvzsFFQAG88r+IqMAjyOtYDPGO0cqK5HF5Uosdy/zUEGySeAzytENMDynREd" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha512-BwHfrr4c9kmRkLw6iXFdzcdWV/PGkVgiIyIWLLlTSXzWQzxuSg4DiQUCpauz/EWjgk5TYQqX/kvn9pG1NpYfqg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="/js/script.js"></script>
+<script>
+    const socket = io();
+
+if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(
+        (position) => {
+            const { latitude, longitude } = position.coords;
+            // console.log(longitude,latitude);
+            socket.emit('send-location', { longitude, latitude })
+        },
+        (err) => {
+            console.error(err)
+        },
+        {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 5000,
+        }
+    )
+}
+else {
+    console.log('Geo location is not active');
+}
+const map = L.map("map").setView([0, 0], 10);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: 'Jagdeesh Bhandari'
+}).addTo(map)
+
+
+const markers = {};
+
+socket.on('receive-location', (data) => {
+    const { id, latitude, longitude } = data;
+    // console.log('recieved',latitude,longitude)
+    map.setView([latitude, longitude], 16)
+    if (markers[id]) {
+        markers[id].setLatLng([latitude, longitude])
+    }
+    else {
+        markers[id] = L.marker([latitude, longitude]).addTo(map)
+    }
+})
+
+socket.on('user-disconnect', (id) => {
+    if (markers[id]) {
+        map.removeLayers[markers[id]];
+        delete markers[id]
+    }
+})
+</script>
+
 </html>
